@@ -8,12 +8,24 @@ import android.view.MenuItem;
 import android.view.View;
 
 
-public class CupScan extends Activity {
+public class Bartender extends Activity {
+
+    private boolean cupScanned;
+    static final String cup = "CUP_THERE";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_cup_scan);
+        if(savedInstanceState == null || savedInstanceState.getBoolean(cup))
+            setContentView(R.layout.activity_cup_scan);
+        else
+            setContentView(R.layout.activity_drink_selector);
+    }
+
+    @Override
+    protected void onSaveInstanceState (Bundle outState) {
+        outState.putBoolean(cup, cupScanned);
+        super.onSaveInstanceState(outState);
     }
 
 
@@ -38,7 +50,7 @@ public class CupScan extends Activity {
 
     public void newPage(View view)
     {
-        Intent intent = new Intent(this, DrinkSelector.class);
-        startActivity(intent);
+        this.cupScanned = true;
+        setContentView(R.layout.activity_drink_selector);
     }
 }
