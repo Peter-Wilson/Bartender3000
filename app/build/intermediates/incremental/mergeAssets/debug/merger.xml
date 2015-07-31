@@ -1,2 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<<<<<<< HEAD
 <merger version="3"><dataSet config="main"><source path="C:\Users\Peter\Desktop\SideProjects\Bartender3000\app\src\main\assets"/></dataSet><dataSet config="debug"><source path="C:\Users\Peter\Desktop\SideProjects\Bartender3000\app\src\debug\assets"/></dataSet></merger>
+=======
+<merger version="2" >
+
+    <dataSet config="main" >
+        <source path="C:\Users\Peter\Desktop\SideProjects\Bartender3000\app\src\main\assets" />
+    </dataSet>
+    <dataSet config="debug" >
+        <source path="C:\Users\Peter\Desktop\SideProjects\Bartender3000\app\src\debug\assets" />
+    </dataSet>
+
+</merger>
+>>>>>>> a6ce192e10e491bf1f43634e4f9a33ecd64044b7
