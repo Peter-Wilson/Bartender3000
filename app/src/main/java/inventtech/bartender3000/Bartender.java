@@ -76,7 +76,7 @@ public class Bartender extends Activity {
         {
             for(BluetoothDevice device : (Set<BluetoothDevice>)pairedDevices)
             {
-                if(device.getName().equals("MattsBlueTooth")) //Note, you will need to change this to match the name of your device
+                if(device.getName().equals("itead")) //Note, you will need to change this to match the name of your device
                 {
                     return device;
                 }
@@ -92,7 +92,6 @@ public class Bartender extends Activity {
             UUID uuid = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb"); //Standard SerialPortService ID
             BluetoothSocket socket = device.createInsecureRfcommSocketToServiceRecord(uuid);
             return socket;
-
         }
         catch(Exception e)
         {
