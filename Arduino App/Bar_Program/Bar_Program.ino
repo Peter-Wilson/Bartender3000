@@ -1,3 +1,5 @@
+#include <SoftwareSerial.h> //import the serial lib to read from bluetooth
+
 int ind1=0;  //inductive sensor States
 int ind2=0;
 int ind3=0;
@@ -25,6 +27,8 @@ int drink2=0;
 int drink3=0;
 int drink4=0;
 
+int x = 50; //temp x value
+
 const int ind1pin = 13;  //inductive pins 
 const int ind2pin = 12;
 const int ind3pin = 11;
@@ -49,6 +53,11 @@ const int orangePin = x;
 
 const int motorForPin = x;  //Motor Movement
 const int motorRevPin = x;
+
+int bluetoothTx = 2; //Bluetooth input
+int bluetoothRx = 3; //Bluetooth output
+
+SoftwareSerial bluetooth(bluetoothTx, bluetoothRx);
 
 void setup() {
  
@@ -77,6 +86,13 @@ void setup() {
     pinMode(motorForPin, OUTPUT);
     pinMode(motorRevPin, OUTPUT);
     Serial.begin(9600);
+
+    //Setup Bluetooth serial connection to android application
+    bluetooth.begin(115200);
+    bluetooth.print("$$$");
+    delay(100);
+    bluetooth.println("U,9600,N");
+    bluetooth.begin(9600);
 }
 
 
@@ -96,14 +112,45 @@ void loop(){
   ls2 = digitalRead(arm2location);
   ls3 = digitalRead(arm3location);
   ls4 = digitalRead(arm4location);
+
+  //Read from bluetooth and write to usb serial
+  if(bluetooth.available())
+  {
+    char drinkSelected = (char)bluetooth.read();
+
+    switch(drinkSelected) //determine the drink that was selected
+    {
+      case 'a': 
+        drink1 = 1;
+        break;
+      case 'b':
+        drink2 = 1;
+        break;
+      case 'c':
+        drink3 = 1;
+        break;
+      case 'd':
+        drink4 = 1;
+    }
+  }
+
+  //Read from usb serial to bluetooth
+  if(Serial.available())
+  {
+    char toSend = (char)Serial.read();
+    bluetooth.print(toSend);
+  }
   
   //Cup Check Code
   if (ind1 == 1 || ind2 == 1 || ind3 == 1) {
-
-    Serial.println("Cup Checked");
+    if(cupCheck == 0)
+      bluetooth.print('y');
     cupCheck=1;
+    Serial.println("Cup Checked");
   }
   else {
+    if(cupCheck == 1)
+      bluetooth.print('n');
     cupCheck=0;
     Serial.println("Cup Not Found");
   }
