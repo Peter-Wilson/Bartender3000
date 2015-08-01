@@ -6,10 +6,14 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.util.Set;
 import java.util.UUID;
@@ -24,6 +28,8 @@ public class Bartender extends Activity {
     private BluetoothSocket arduinoSocket;
     private Thread input;
     private boolean stopWorker;
+    private InputStream in;
+    private OutputStream out;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,26 +53,92 @@ public class Bartender extends Activity {
             return;
         }
 
-        if (savedInstanceState == null || savedInstanceState.getBoolean(cup)) {
+        try {
+            arduinoSocket.connect();
+            in = arduinoSocket.getInputStream();
+            out = arduinoSocket.getOutputStream();
+        }
+        catch(Exception e)
+        {
+
+        }
+        if (savedInstanceState == null || !savedInstanceState.getBoolean("CupThere")) {
             setContentView(R.layout.activity_cup_scan);
         } else {
             setContentView(R.layout.activity_drink_selector);
         }
 
-        /*
-        final Handler handler = new Handler();
-        input = new Thread(new Runnable()
+       /* try
         {
-            public void run()
-            {
-                while(!Thread.currentThread().isInterrupted() && !stopWorker)
-                {
-                    //Do work
+            in = arduinoSocket.getInputStream();
+            out = arduinoSocket.getOutputStream();
+        }
+        catch(Exception e)
+        {
+            System.out.println("Cannot establish connection");
+            return;
+        }*/
+
+
+        SetUpInputThread();
+
+    }
+
+    private void SetUpInputThread() {
+            final Handler handler = new Handler();
+            input = new Thread(new Runnable() {
+                public void run() {
+                    Log.d("CREATION","creating thread");
+                    try {
+                        Log.d("TRY", "in try");
+
+                        while (!Thread.currentThread().isInterrupted() && !stopWorker) {
+                            int bytesAvailable = in.available();
+
+                            Log.d("AVAILABLE", ""+bytesAvailable);
+                            if (bytesAvailable > 0) {
+                                byte[] packetBytes = new byte[bytesAvailable];
+                                in.read(packetBytes);
+                                int readBufferPosition = 0;
+                                byte[] readBuffer = null;
+
+
+                                for (int i = 0; i < bytesAvailable; i++) {
+                                    byte b = packetBytes[i];
+                                    if (b == 10) {
+                                        byte[] encodedBytes = new byte[readBufferPosition];
+                                        System.arraycopy(readBuffer, 0, encodedBytes, 0, encodedBytes.length);
+                                        final String data = new String(encodedBytes, "US-ASCII");
+                                        Log.d("INPUT", data);
+                                        readBufferPosition = 0;
+
+                                        handler.post(new Runnable() {
+                                            public void run() {
+                                                if (data.equals('y')) {
+                                                    newCup();
+                                                } else {
+                                                    cupGone();
+                                                }
+                                            }
+                                        });
+
+                                        //The variable data now contains our full command
+                                    } else {
+                                        readBuffer[readBufferPosition++] = b;
+                                    }
+                                }
+                            }
+                        }
+
+                        arduinoSocket.close();
+                    }
+                    catch(Exception e) {
+                        Log.d("CAUGHT",e.getMessage());
+                        System.out.println("Error occurred while recieving input");
+                    }
                 }
-            }
-        });
-        input.start();
-        */
+            });
+            input.start();
     }
 
     //Find the paired arduino
@@ -109,6 +181,7 @@ public class Bartender extends Activity {
         {
 
         }
+        outState.putBoolean("CupThere", cupScanned);
         super.onSaveInstanceState(outState);
     }
 
@@ -137,5 +210,19 @@ public class Bartender extends Activity {
     {
         this.cupScanned = true;
         setContentView(R.layout.activity_drink_selector);
+
+    }
+
+    public void newCup()
+    {
+        this.cupScanned = true;
+
+        setContentView(R.layout.activity_drink_selector);
+    }
+
+    public void cupGone()
+    {
+        this.cupScanned = false;
+        setContentView(R.layout.activity_cup_scan);
     }
 }

@@ -54,8 +54,8 @@ const int orangePin = x;
 const int motorForPin = x;  //Motor Movement
 const int motorRevPin = x;
 
-int bluetoothTx = 2; //Bluetooth input
-int bluetoothRx = 3; //Bluetooth output
+int bluetoothTx = 1; //Bluetooth input
+int bluetoothRx = 0; //Bluetooth output
 
 SoftwareSerial bluetooth(bluetoothTx, bluetoothRx);
 
@@ -113,6 +113,7 @@ void loop(){
   ls3 = digitalRead(arm3location);
   ls4 = digitalRead(arm4location);
 
+
   //Read from bluetooth and write to usb serial
   if(bluetooth.available())
   {
@@ -133,18 +134,12 @@ void loop(){
         drink4 = 1;
     }
   }
-
-  //Read from usb serial to bluetooth
-  if(Serial.available())
-  {
-    char toSend = (char)Serial.read();
-    bluetooth.print(toSend);
-  }
   
   //Cup Check Code
   if (ind1 == 1 || ind2 == 1 || ind3 == 1) {
-    if(cupCheck == 0)
-      bluetooth.print('y');
+    //if(cupCheck == 0)
+    bluetooth.print("y");
+    delay(100);
     cupCheck=1;
     Serial.println("Cup Checked");
   }
@@ -271,12 +266,8 @@ void loop(){
     motorMoveRev=1;
 
   }
-  
-
-
 
 }
-  
   
   
   
