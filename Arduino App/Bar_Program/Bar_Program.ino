@@ -54,10 +54,10 @@ const int orangePin = x;
 const int motorForPin = x;  //Motor Movement
 const int motorRevPin = x;
 
-int bluetoothTx = 1; //Bluetooth input
-int bluetoothRx = 0; //Bluetooth output
+int bluetoothRx = 3; //Bluetooth output
+int bluetoothTx = 4; //Bluetooth input
 
-SoftwareSerial bluetooth(bluetoothTx, bluetoothRx);
+SoftwareSerial bluetooth(bluetoothRx, bluetoothTx);
 
 void setup() {
  
@@ -87,6 +87,10 @@ void setup() {
     pinMode(motorRevPin, OUTPUT);
     Serial.begin(9600);
 
+    //pinMode(bluetoothRx, OUTPUT);
+    //pinMode(bluetoothTx, INPUT);
+    
+
     //Setup Bluetooth serial connection to android application
     bluetooth.begin(115200);
     bluetooth.print("$$$");
@@ -113,11 +117,14 @@ void loop(){
   ls3 = digitalRead(arm3location);
   ls4 = digitalRead(arm4location);
 
-
-  //Read from bluetooth and write to usb serial
+  //Serial.println("Test");
+  //Read from bluetooth
   if(bluetooth.available())
   {
+    Serial.println("Bluetooth Input:");
     char drinkSelected = (char)bluetooth.read();
+    
+    Serial.println(drinkSelected);
 
     switch(drinkSelected) //determine the drink that was selected
     {
@@ -133,6 +140,11 @@ void loop(){
       case 'd':
         drink4 = 1;
     }
+    Serial.println("Drink Selected");
+  }
+  else
+  {
+    Serial.println("No Bluetooth input");
   }
   
   //Cup Check Code
@@ -141,13 +153,13 @@ void loop(){
     bluetooth.print("y");
     delay(100);
     cupCheck=1;
-    Serial.println("Cup Checked");
+    //Serial.println("Cup Checked");
   }
   else {
     if(cupCheck == 1)
       bluetooth.print('n');
     cupCheck=0;
-    Serial.println("Cup Not Found");
+    //Serial.println("Cup Not Found");
   }
   
   //Drink Selection Lockout

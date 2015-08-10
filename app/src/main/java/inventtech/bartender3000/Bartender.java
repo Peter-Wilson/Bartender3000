@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -12,9 +14,11 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -30,19 +34,48 @@ public class Bartender extends Activity {
     private boolean stopWorker;
     private InputStream in;
     private OutputStream out;
+    /* request BT enable */
+    private static final int  REQUEST_ENABLE      = 0x1;
+    /* request BT discover */
+    private static final int  REQUEST_DISCOVERABLE  = 0x2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        /*
         //Get the bluetooth adapter
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
-        //If not enabled, prompt to enable
-        if (!bluetoothAdapter.isEnabled()) {
-            Intent enableBluetooth = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBluetooth, 0);
-        }
+
+        //enable
+        bluetoothAdapter.enable();
+
+        Intent enabler = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+        startActivityForResult(enabler, REQUEST_DISCOVERABLE);
+
+
+
+        BroadcastReceiver _foundReceiver = new BroadcastReceiver() {
+            public void onReceive(Context context, Intent intent) {
+                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                _devices.add(device);
+                showDevices();
+            }
+        };
+
+        BroadcastReceiver _discoveryReceiver = new BroadcastReceiver() {
+
+            @Override
+            public void onReceive(Context context, Intent intent)
+            {
+                Log.d("EF-BTBee", ">>unregisterReceiver");
+                unregisterReceiver(_foundReceiver);
+                unregisterReceiver(this);
+                _discoveryFinished = true;
+            }
+        };
+
 
         arduino = GetArduinoDevice();
         arduinoSocket = getDeviceSocket(arduino);
@@ -60,10 +93,19 @@ public class Bartender extends Activity {
         }
         catch(Exception e)
         {
-
-        }
+            return;
+        }*/
         if (savedInstanceState == null || !savedInstanceState.getBoolean("CupThere")) {
             setContentView(R.layout.activity_cup_scan);
+            // Execute some code after 2 seconds have passed
+            Handler handler = new Handler();
+            handler.postDelayed(new Runnable() {
+                public void run() {
+                    setContentView(R.layout.activity_drink_selector);
+                }
+            }, 2000);
+
+
         } else {
             setContentView(R.layout.activity_drink_selector);
         }
@@ -80,9 +122,40 @@ public class Bartender extends Activity {
         }*/
 
 
-        SetUpInputThread();
+        //SetUpInputThread();
 
     }
+
+    protected void connect(BluetoothDevice device) {
+        //BluetoothSocket socket = null;
+        try {
+            //Create a Socket connection: need the server's UUID number of registered
+            arduinoSocket = device.createRfcommSocketToServiceRecord(UUID.fromString("a60f35f0-b93a-11de-8a39-08002009c666"));
+
+            arduinoSocket.connect();
+            Log.d("EF-BTBee", ">>Client connectted");
+
+            InputStream inputStream = arduinoSocket.getInputStream();
+            OutputStream outputStream = arduinoSocket.getOutputStream();
+            outputStream.write(new byte[]{(byte) 0xa0, 0, 7, 16, 0, 4, 0});
+
+        } catch (IOException e) {
+            Log.e("EF-BTBee", "", e);
+        } finally {
+            if (arduinoSocket != null) {
+                try {
+                    Log.d("EF-BTBee", ">>Client Close");
+                    arduinoSocket.close();
+                    finish();
+                    return;
+                } catch (IOException e) {
+                    Log.e("EF-BTBee", "", e);
+                }
+            }
+        }
+    }
+
+
 
     private void SetUpInputThread() {
             final Handler handler = new Handler();
