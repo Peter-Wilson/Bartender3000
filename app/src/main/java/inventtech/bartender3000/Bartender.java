@@ -7,12 +7,17 @@ import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.ColorFilter;
+import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,6 +43,7 @@ public class Bartender extends Activity {
     private static final int  REQUEST_ENABLE      = 0x1;
     /* request BT discover */
     private static final int  REQUEST_DISCOVERABLE  = 0x2;
+    private ImageButton drink1, drink2, drink3, drink4;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -102,13 +108,16 @@ public class Bartender extends Activity {
             handler.postDelayed(new Runnable() {
                 public void run() {
                     setContentView(R.layout.activity_drink_selector);
+                    SetOnClickListeners();
                 }
             }, 2000);
 
-
         } else {
             setContentView(R.layout.activity_drink_selector);
+            SetOnClickListeners();
         }
+
+
 
        /* try
         {
@@ -124,6 +133,65 @@ public class Bartender extends Activity {
 
         //SetUpInputThread();
 
+    }
+
+    private void SetOnClickListeners() {
+        drink1 = (ImageButton) findViewById(R.id.drink1);
+        drink2 = (ImageButton) findViewById(R.id.drink2);
+        drink3 = (ImageButton) findViewById(R.id.drink3);
+        drink4 = (ImageButton) findViewById(R.id.drink4);
+
+        drink1.setOnClickListener(new View.OnClickListener() {
+                                                @Override
+                                                public void onClick(View v) {
+                                                    ButtonSelected(drink1,1);
+                                                }
+                                            }
+        );
+
+        drink2.setOnClickListener(new View.OnClickListener() {
+                                      @Override
+                                      public void onClick(View v) {
+                                          ButtonSelected(drink2,2);
+                                      }
+                                  }
+        );
+
+        drink3.setOnClickListener(new View.OnClickListener() {
+                                      @Override
+                                      public void onClick(View v) {
+                                          ButtonSelected(drink3,3);
+                                      }
+                                  }
+        );
+
+        drink4.setOnClickListener(new View.OnClickListener() {
+                                      @Override
+                                      public void onClick(View v) {
+                                          ButtonSelected(drink4,4);
+                                      }
+                                  }
+        );
+    }
+
+    protected void drink2Selected()
+    {
+
+    }
+
+    protected void ButtonSelected(ImageButton button,int number)
+    {
+        try {
+            ((ImageView) findViewById(R.id.drink1)).setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
+            ((ImageView) findViewById(R.id.drink2)).setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
+            ((ImageView) findViewById(R.id.drink3)).setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
+            ((ImageView) findViewById(R.id.drink4)).setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
+            button.clearColorFilter();
+        }
+        catch(Exception e)
+        {
+
+        }
     }
 
     protected void connect(BluetoothDevice device) {
