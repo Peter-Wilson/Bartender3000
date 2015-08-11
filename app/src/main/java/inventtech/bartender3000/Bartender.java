@@ -1,12 +1,15 @@
 package inventtech.bartender3000;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.PorterDuff;
@@ -22,6 +25,7 @@ import android.widget.ImageView;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.net.Socket;
 import java.util.List;
 import java.util.Set;
@@ -39,6 +43,8 @@ public class Bartender extends Activity {
     private boolean stopWorker;
     private InputStream in;
     private OutputStream out;
+    byte[] readBuffer;
+    int readBufferPosition;
     /* request BT enable */
     private static final int  REQUEST_ENABLE      = 0x1;
     /* request BT discover */
@@ -49,48 +55,21 @@ public class Bartender extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        /*
+        cupScanned = false;
+
+
         //Get the bluetooth adapter
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
-
-        //enable
-        bluetoothAdapter.enable();
-
-        Intent enabler = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-        startActivityForResult(enabler, REQUEST_DISCOVERABLE);
-
-
-
-        BroadcastReceiver _foundReceiver = new BroadcastReceiver() {
-            public void onReceive(Context context, Intent intent) {
-                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                _devices.add(device);
-                showDevices();
-            }
-        };
-
-        BroadcastReceiver _discoveryReceiver = new BroadcastReceiver() {
-
-            @Override
-            public void onReceive(Context context, Intent intent)
-            {
-                Log.d("EF-BTBee", ">>unregisterReceiver");
-                unregisterReceiver(_foundReceiver);
-                unregisterReceiver(this);
-                _discoveryFinished = true;
-            }
-        };
-
+        //enable bluetooth if it isn't already
+        if(!bluetoothAdapter.isEnabled())
+        {
+            Intent enabler = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enabler, REQUEST_ENABLE);
+        }
 
         arduino = GetArduinoDevice();
         arduinoSocket = getDeviceSocket(arduino);
-
-        //cannot connect to the arduino
-        if (arduino == null || arduinoSocket == null) {
-            System.out.println("Connection was unsuccessful");
-            return;
-        }
 
         try {
             arduinoSocket.connect();
@@ -99,23 +78,26 @@ public class Bartender extends Activity {
         }
         catch(Exception e)
         {
+            //cannot connect to the arduino
+            showAlert("Connection Unsuccessful", "Unable to connect to Arduino. Please restart and try again");
+            System.out.println("Connection was unsuccessful");
             return;
-        }*/
+        }
         if (savedInstanceState == null || !savedInstanceState.getBoolean("CupThere")) {
             setContentView(R.layout.activity_cup_scan);
+
             // Execute some code after 2 seconds have passed
-            Handler handler = new Handler();
-            handler.postDelayed(new Runnable() {
-                public void run() {
-                    setContentView(R.layout.activity_drink_selector);
-                    SetOnClickListeners();
-                }
-            }, 2000);
+            SetUpInputThread();
+
 
         } else {
             setContentView(R.layout.activity_drink_selector);
             SetOnClickListeners();
+            SetUpInputThread();
         }
+
+
+
 
 
 
@@ -135,6 +117,32 @@ public class Bartender extends Activity {
 
     }
 
+    private void pairDevice(BluetoothDevice device) {
+        try {
+             Log.d("TAG", "Start Pairing...");
+
+            //waitingForBonding = true;
+
+            Method m = device.getClass()
+                    .getMethod("createBond", (Class[]) null);
+            m.invoke(device, (Object[]) null);
+
+            Log.d("TAG", "Pairing finished.");
+        } catch (Exception e) {
+            Log.e("TAG", e.getMessage());
+        }
+    }
+
+    private void unpairDevice(BluetoothDevice device) {
+        try {
+            Method m = device.getClass()
+                    .getMethod("removeBond", (Class[]) null);
+            m.invoke(device, (Object[]) null);
+        } catch (Exception e) {
+            Log.e("TAG", e.getMessage());
+        }
+    }
+
     private void SetOnClickListeners() {
         drink1 = (ImageButton) findViewById(R.id.drink1);
         drink2 = (ImageButton) findViewById(R.id.drink2);
@@ -144,7 +152,7 @@ public class Bartender extends Activity {
         drink1.setOnClickListener(new View.OnClickListener() {
                                                 @Override
                                                 public void onClick(View v) {
-                                                    ButtonSelected(drink1,1);
+                                                    ButtonSelected(drink1,'a');
                                                 }
                                             }
         );
@@ -152,7 +160,7 @@ public class Bartender extends Activity {
         drink2.setOnClickListener(new View.OnClickListener() {
                                       @Override
                                       public void onClick(View v) {
-                                          ButtonSelected(drink2,2);
+                                          ButtonSelected(drink2,'b');
                                       }
                                   }
         );
@@ -160,7 +168,7 @@ public class Bartender extends Activity {
         drink3.setOnClickListener(new View.OnClickListener() {
                                       @Override
                                       public void onClick(View v) {
-                                          ButtonSelected(drink3,3);
+                                          ButtonSelected(drink3,'c');
                                       }
                                   }
         );
@@ -168,18 +176,13 @@ public class Bartender extends Activity {
         drink4.setOnClickListener(new View.OnClickListener() {
                                       @Override
                                       public void onClick(View v) {
-                                          ButtonSelected(drink4,4);
+                                          ButtonSelected(drink4,'d');
                                       }
                                   }
         );
     }
 
-    protected void drink2Selected()
-    {
-
-    }
-
-    protected void ButtonSelected(ImageButton button,int number)
+    protected void ButtonSelected(ImageButton button,char choice)
     {
         try {
             ((ImageView) findViewById(R.id.drink1)).setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
@@ -187,46 +190,35 @@ public class Bartender extends Activity {
             ((ImageView) findViewById(R.id.drink3)).setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
             ((ImageView) findViewById(R.id.drink4)).setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
             button.clearColorFilter();
-        }
-        catch(Exception e)
-        {
+
+            out.write(choice);
+            out.flush();
+        } catch (Exception e) {
 
         }
     }
 
-    protected void connect(BluetoothDevice device) {
-        //BluetoothSocket socket = null;
-        try {
-            //Create a Socket connection: need the server's UUID number of registered
-            arduinoSocket = device.createRfcommSocketToServiceRecord(UUID.fromString("a60f35f0-b93a-11de-8a39-08002009c666"));
-
-            arduinoSocket.connect();
-            Log.d("EF-BTBee", ">>Client connectted");
-
-            InputStream inputStream = arduinoSocket.getInputStream();
-            OutputStream outputStream = arduinoSocket.getOutputStream();
-            outputStream.write(new byte[]{(byte) 0xa0, 0, 7, 16, 0, 4, 0});
-
-        } catch (IOException e) {
-            Log.e("EF-BTBee", "", e);
-        } finally {
-            if (arduinoSocket != null) {
-                try {
-                    Log.d("EF-BTBee", ">>Client Close");
-                    arduinoSocket.close();
-                    finish();
-                    return;
-                } catch (IOException e) {
-                    Log.e("EF-BTBee", "", e);
-                }
-            }
-        }
+    protected void showAlert(String title, String message) {
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        // continue with delete
+                    }
+                })
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .show();
     }
-
 
 
     private void SetUpInputThread() {
             final Handler handler = new Handler();
+            final byte delimiter = 10; //This is the ASCII code for a newline character
+            stopWorker = false;
+            readBufferPosition = 0;
+            readBuffer = new byte[1024];
+
             input = new Thread(new Runnable() {
                 public void run() {
                     Log.d("CREATION","creating thread");
@@ -236,29 +228,31 @@ public class Bartender extends Activity {
                         while (!Thread.currentThread().isInterrupted() && !stopWorker) {
                             int bytesAvailable = in.available();
 
-                            Log.d("AVAILABLE", ""+bytesAvailable);
+                            Log.d("AVAILABLE", "" + bytesAvailable);
                             if (bytesAvailable > 0) {
                                 byte[] packetBytes = new byte[bytesAvailable];
                                 in.read(packetBytes);
-                                int readBufferPosition = 0;
-                                byte[] readBuffer = null;
-
 
                                 for (int i = 0; i < bytesAvailable; i++) {
                                     byte b = packetBytes[i];
-                                    if (b == 10) {
+                                    if (b == delimiter) {
                                         byte[] encodedBytes = new byte[readBufferPosition];
                                         System.arraycopy(readBuffer, 0, encodedBytes, 0, encodedBytes.length);
                                         final String data = new String(encodedBytes, "US-ASCII");
                                         Log.d("INPUT", data);
                                         readBufferPosition = 0;
 
-                                        handler.post(new Runnable() {
+                                        runOnUiThread(new Runnable() {
                                             public void run() {
-                                                if (data.equals('y')) {
+                                                //showAlert("Data",data);
+                                                if (data.equals("y\r")) {
                                                     newCup();
-                                                } else {
+                                                } else if (data.equals("n\r")) {
                                                     cupGone();
+                                                }
+                                                else if(data.equals("d\r"))
+                                                {
+                                                    drinkFull();
                                                 }
                                             }
                                         });
@@ -275,6 +269,7 @@ public class Bartender extends Activity {
                     }
                     catch(Exception e) {
                         Log.d("CAUGHT",e.getMessage());
+                        stopWorker = true;
                         System.out.println("Error occurred while recieving input");
                     }
                 }
@@ -287,12 +282,17 @@ public class Bartender extends Activity {
         Set pairedDevices = bluetoothAdapter.getBondedDevices();
         if(pairedDevices.size() > 0)
         {
+            int i = 0;
             for(BluetoothDevice device : (Set<BluetoothDevice>)pairedDevices)
             {
-                if(device.getName().equals("itead")) //Note, you will need to change this to match the name of your device
+
+                if(device.getName().toLowerCase().equals("itead"))
                 {
                     return device;
+
                 }
+                else
+                   i++;
             }
         }
         return null;
@@ -347,23 +347,27 @@ public class Bartender extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
-    public void newPage(View view)
-    {
-        this.cupScanned = true;
-        setContentView(R.layout.activity_drink_selector);
-
-    }
-
     public void newCup()
     {
-        this.cupScanned = true;
+        if(!cupScanned) {
+            cupScanned = true;
+            showAlert("Cup Detected", "A Cup has been detected, select your drink");
+            setContentView(R.layout.activity_drink_selector);
+            SetOnClickListeners();
+        }
 
-        setContentView(R.layout.activity_drink_selector);
     }
 
     public void cupGone()
     {
-        this.cupScanned = false;
-        setContentView(R.layout.activity_cup_scan);
+        if(cupScanned) {
+            cupScanned = false;
+            showAlert("Cup Removed","The cup has been removed");
+            setContentView(R.layout.activity_cup_scan);
+        }
+    }
+
+    public void drinkFull() {
+        showAlert("Drink Full","The drink has been filled, you may remove the cup");
     }
 }
