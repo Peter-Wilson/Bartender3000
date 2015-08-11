@@ -54,8 +54,8 @@ const int orangePin = x;
 const int motorForPin = x;  //Motor Movement
 const int motorRevPin = x;
 
-int bluetoothRx = 3; //Bluetooth output
-int bluetoothTx = 4; //Bluetooth input
+int bluetoothRx = 1; //Bluetooth output
+int bluetoothTx = 0; //Bluetooth input
 
 SoftwareSerial bluetooth(bluetoothRx, bluetoothTx);
 
@@ -85,10 +85,10 @@ void setup() {
     
     pinMode(motorForPin, OUTPUT);
     pinMode(motorRevPin, OUTPUT);
-    Serial.begin(9600);
+    Serial1.begin(9600);
 
-    //pinMode(bluetoothRx, OUTPUT);
-    //pinMode(bluetoothTx, INPUT);
+    pinMode(bluetoothRx, INPUT);
+    pinMode(bluetoothTx, OUTPUT);
     
 
     //Setup Bluetooth serial connection to android application
@@ -119,12 +119,21 @@ void loop(){
 
   //Serial.println("Test");
   //Read from bluetooth
+  bluetooth.println('y');
+  if(Serial1.available())
+  {
+    if((char)Serial1.read() == 'a')
+    {
+      bluetooth.println('d');
+    }
+  }
   if(bluetooth.available())
   {
-    Serial.println("Bluetooth Input:");
+    bluetooth.println('d');
+    Serial1.println("Bluetooth Input:");
     char drinkSelected = (char)bluetooth.read();
     
-    Serial.println(drinkSelected);
+    Serial1.println(drinkSelected);
 
     switch(drinkSelected) //determine the drink that was selected
     {
@@ -140,31 +149,30 @@ void loop(){
       case 'd':
         drink4 = 1;
     }
-    Serial.println("Drink Selected");
+    Serial1.println("Drink Selected");
   }
   else
   {
-    Serial.println("No Bluetooth input");
+    //Serial.println("No Bluetooth input");
   }
   
   //Cup Check Code
   if (ind1 == 1 || ind2 == 1 || ind3 == 1) {
     //if(cupCheck == 0)
-    bluetooth.print("y");
-    delay(100);
+    bluetooth.println("y");
     cupCheck=1;
     //Serial.println("Cup Checked");
   }
   else {
-    if(cupCheck == 1)
-      bluetooth.print('n');
+    //if(cupCheck == 1)    
+    bluetooth.println('n');
     cupCheck=0;
     //Serial.println("Cup Not Found");
   }
   
   //Drink Selection Lockout
   if (sw1 == 1 && cupCheck == 1 && ls4 == 1) {
-    Serial.println("Drink 1 Selected");  
+    Serial1.println("Drink 1 Selected");  
     drink1=1;
     drink2=0;
     drink3=0;
@@ -175,7 +183,7 @@ void loop(){
     
    //Drink Selection Lockout
   if (sw2 == 1 && cupCheck == 1 && ls4 == 1) {
-    Serial.println("Drink 2 Selected");  
+    Serial1.println("Drink 2 Selected");  
     drink1=0;
     drink2=1;
     drink3=0;
@@ -186,7 +194,7 @@ void loop(){
    
    //Drink Selection Lockout
   if (sw3 == 1 && cupCheck == 1 && ls4 ==1) {
-    Serial.println("Drink 3 Selected");  
+    Serial1.println("Drink 3 Selected");  
     drink1=0;
     drink2=0;
     drink3=1;
@@ -196,7 +204,7 @@ void loop(){
   } 
    //Drink Selection Lockout
   if (sw4 == 1 && cupCheck == 1 && ls4 == 1) {
-    Serial.println("Drink 4 Selected");  
+    Serial1.println("Drink 4 Selected");  
     drink1=0;
     drink2=0;
     drink3=0;
@@ -217,7 +225,7 @@ void loop(){
  //Stops Arm When it is in Home Position
  if (motorMoveRev == 1 && ls4 ==1) {
    motorMoveRev=0;
-   Serial.println("Arm At Home Position");
+   Serial1.println("Arm At Home Position");
  } 
  
  //Reset Drink Finished
@@ -229,21 +237,21 @@ void loop(){
  //Location 1
   if (motorMoveFor == 1 && ls1 == 1) {
     
-    Serial.println("Arm in Location 1, Ready To Pour Drink");
+    Serial1.println("Arm in Location 1, Ready To Pour Drink");
     motorMoveFor=0;
     drinkReady=1;
   }
   //Location 2
    if (motorMoveFor == 1 && ls2 == 1) {
     
-    Serial.println("Arm in Location 2, Ready To Pour Drink");
+    Serial1.println("Arm in Location 2, Ready To Pour Drink");
     motorMoveFor=0;
     drinkReady=1;
   }
   //Location 3
   if (motorMoveFor == 1 && ls3 == 1) {
     
-    Serial.println("Arm in Location 3, Ready To Pour Drink");
+    Serial1.println("Arm in Location 3, Ready To Pour Drink");
     motorMoveFor=0;
     drinkReady=1;
   }
@@ -263,6 +271,7 @@ void loop(){
     //Monitor Stop Timing
     delay(500);
     drinkFin=1;
+    bluetooth.println('d');
     drinkReady=0;
   }
   
