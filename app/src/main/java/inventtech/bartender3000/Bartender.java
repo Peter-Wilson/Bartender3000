@@ -194,7 +194,7 @@ public class Bartender extends Activity {
             out.write(choice);
             out.flush();
         } catch (Exception e) {
-
+            showAlert("Cannot Send", "Sorry, the message cannot be sent.");
         }
     }
 
@@ -249,9 +249,7 @@ public class Bartender extends Activity {
                                                     newCup();
                                                 } else if (data.equals("n\r")) {
                                                     cupGone();
-                                                }
-                                                else if(data.equals("d\r"))
-                                                {
+                                                } else if (data.equals("d\r")) {
                                                     drinkFull();
                                                 }
                                             }
