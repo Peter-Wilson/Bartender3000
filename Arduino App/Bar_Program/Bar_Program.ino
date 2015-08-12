@@ -120,11 +120,11 @@ void loop(){
 
   //Read from bluetooth
   //Serial.println(bluetooth.read());
-  bluetooth.println('y');
+  //bluetooth.println('y');
   
   if(bluetooth.available())
   {
-    bluetooth.println('d');
+    //bluetooth.println('d');
     Serial.println("Bluetooth Input:");
     char drinkSelected = (char)bluetooth.read();
     
