@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -52,21 +53,27 @@ public class Bartender extends Activity {
     byte[] readBuffer;
     int readBufferPosition;
     private static final int  REQUEST_ENABLE = 0x1;
+    private static final int DISCOVER_DURATION = 300;
+    private static final int REQUEST_BLU = 2;
     private ImageButton drink1, drink2, drink3, drink4;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        setContentView(R.layout.activity_cup_scan);
         cupScanned = false;
+        initializeBluetooth();
+    }
 
-
+    private void initializeBluetooth() {
         //Get the bluetooth adapter
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 
         if(bluetoothAdapter == null)
         {
-            Toast.makeText(this, "Bluetooth is not supported on this device", Toast.LENGTH_LONG);
+            showAppCloseAlert("Bluetooth Required", "Bluetooth is not supported on this device, application closing");
+            return;
         }
 
         //enable bluetooth if it isn't already
@@ -74,16 +81,18 @@ public class Bartender extends Activity {
         {
             Intent enabler = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enabler, REQUEST_ENABLE);
+            return;
+        }
+
+        //Pair with the Arduino
+        arduino = GetArduinoDevice();
+        if(arduino == null) {
+            showArduinoConnectionAlert();
+            return;
         }
 
         //connect to bluetooth arduino and set up input/output streams
         try {
-
-            arduino = GetArduinoDevice();
-            if(arduino == null) {
-               // findDevice();
-                Toast.makeText(this,"You have not paired with the arduino yet",Toast.LENGTH_LONG);
-            }
             arduinoSocket = getDeviceSocket(arduino);
             arduinoSocket.connect();
             in = arduinoSocket.getInputStream();
@@ -92,14 +101,61 @@ public class Bartender extends Activity {
         catch(Exception e)
         {
             //cannot connect to the arduino
-            showAlert("Cannot Connect","Unable to connect to Arduino. Please restart and try again");
+            showAppCloseAlert("Cannot Connect","Unable to connect to Arduino. Application closing, please try again");
             System.out.println("Connection was unsuccessful");
-            //return;
+            return;
         }
 
-        //load the cup scan view
-        setContentView(R.layout.activity_cup_scan);
-        SetUpInputThread();
+        //start reading inputs
+        try
+        {
+            SetUpInputThread();
+        }
+        catch (Exception e)
+        {
+            //cannot connect to the arduino
+            showAlert("Cannot Read","Unable to read from the arduino");
+            System.out.println("Connection was unsuccessful");
+            newCup();
+        }
+
+
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data){
+        // Check which request we're responding to
+        if (requestCode == REQUEST_ENABLE) {
+            // Make sure the request was successful
+            if (resultCode == RESULT_OK) {
+                initializeBluetooth();
+            }
+            else
+            {
+                Intent enabler = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                startActivityForResult(enabler, REQUEST_ENABLE);
+            }
+        }
+        else if(requestCode == REQUEST_BLU) {
+            //if still not paired, exit
+            arduino = GetArduinoDevice();
+            if(arduino == null)
+            {
+                showAppCloseAlert("Not Paired", "Your device is not paired with the arduino. Closing the application now.");
+                return;
+            }
+
+
+            //if paired, continue
+            initializeBluetooth();
+        }
+    }
+
+    protected void OpenBluetoothSettings()
+    {
+        Intent intentOpenBluetoothSettings = new Intent();
+        intentOpenBluetoothSettings.setAction(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS);
+        startActivityForResult(intentOpenBluetoothSettings, REQUEST_BLU);
     }
 
     protected void showAlert(String title, String message) {
@@ -109,6 +165,33 @@ public class Bartender extends Activity {
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         // continue with delete
+                    }
+                })
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .show();
+    }
+
+    protected void showArduinoConnectionAlert() {
+        new AlertDialog.Builder(this)
+                .setTitle("Pair with Arduino")
+                .setMessage("You must pair with the arduino to continue.")
+                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        OpenBluetoothSettings();
+                    }
+                })
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .show();
+    }
+
+    protected void showAppCloseAlert(String title, String message) {
+        final Bartender b = this;
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        b.finishAffinity();
                     }
                 })
                 .setIcon(android.R.drawable.ic_dialog_alert)
