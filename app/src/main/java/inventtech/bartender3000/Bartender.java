@@ -51,9 +51,7 @@ public class Bartender extends Activity {
     private OutputStream out;
     byte[] readBuffer;
     int readBufferPosition;
-    private static final int  REQUEST_ENABLE      = 0x1;
-    private static final int REQUEST_BLU = 1;
-    private static final int DISCOVER_DURATION = 300;
+    private static final int  REQUEST_ENABLE = 0x1;
     private ImageButton drink1, drink2, drink3, drink4;
 
     @Override
