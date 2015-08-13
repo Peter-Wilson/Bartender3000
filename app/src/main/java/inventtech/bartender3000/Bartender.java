@@ -101,7 +101,7 @@ public class Bartender extends Activity {
         catch(Exception e)
         {
             //cannot connect to the arduino
-            showAppCloseAlert("Cannot Connect","Unable to connect to Arduino. Application closing, please try again");
+            showAppCloseAlert("Cannot Connect","Unable to connect to Arduino. Application closing, try Unpairing with the device.");
             System.out.println("Connection was unsuccessful");
             return;
         }
