@@ -235,6 +235,26 @@ public class Bartender extends Activity {
         });
     }
 
+    //remove click listeners and darken the buttons
+    private void DisableButtons()
+    {
+        drink1 = (ImageButton) findViewById(R.id.drink1);
+        drink2 = (ImageButton) findViewById(R.id.drink2);
+        drink3 = (ImageButton) findViewById(R.id.drink3);
+        drink4 = (ImageButton) findViewById(R.id.drink4);
+
+        drink1.setOnClickListener(null);
+        drink2.setOnClickListener(null);
+        drink3.setOnClickListener(null);
+        drink4.setOnClickListener(null);
+
+
+        drink1.setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
+        drink2.setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
+        drink3.setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
+        drink4.setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
+    }
+
     protected void ButtonSelected(ImageButton button,char choice)
     {
         try {
@@ -421,7 +441,7 @@ public class Bartender extends Activity {
 
     //the drink is filled
     public void drinkFull() {
-        DefaultButtons();
+        DisableButtons();
         Toast.makeText(this, "The drink has been filled, you may remove the cup", Toast.LENGTH_LONG);
     }
 }
