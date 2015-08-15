@@ -53,7 +53,6 @@ public class Bartender extends Activity {
     byte[] readBuffer;
     int readBufferPosition;
     private static final int  REQUEST_ENABLE = 0x1;
-    private static final int DISCOVER_DURATION = 300;
     private static final int REQUEST_BLU = 2;
     private ImageButton drink1, drink2, drink3, drink4;
 
@@ -101,7 +100,8 @@ public class Bartender extends Activity {
         catch(Exception e)
         {
             //cannot connect to the arduino
-            showAppCloseAlert("Cannot Connect","Unable to connect to Arduino. Application closing, try Unpairing with the device.");
+            showAppCloseAlert("Cannot Connect","Unable to connect to Arduino. Application closing, try RePairing with the device.");
+            unpairDevice(arduino);
             System.out.println("Connection was unsuccessful");
             return;
         }
@@ -120,6 +120,18 @@ public class Bartender extends Activity {
         }
 
 
+    }
+
+    //For UnPairing
+    private void unpairDevice(BluetoothDevice device) {
+        try {
+            Log.d("unpairDevice()", "Start Un-Pairing...");
+            Method m = device.getClass().getMethod("removeBond", (Class[]) null);
+            m.invoke(device, (Object[]) null);
+            Log.d("unpairDevice()", "Un-Pairing finished.");
+        } catch (Exception e) {
+            System.out.println("Cannot unpair");
+        }
     }
 
     @Override
