@@ -19,14 +19,16 @@
         android:textColor="@android:color/white"
         android:textSize="100px"
         android:gravity="center"
+        android:layout_centerHorizontal="true"
         />
 
-    <ImageView
+    <ProgressBar
         android:id="@+id/loader"
+        style="?android:attr/progressBarStyleLarge"
         android:layout_width="match_parent"
         android:layout_height="200dp"
-        android:src="@drawable/download"
         android:layout_below="@id/text"
-        android:gravity="center"/>
+        android:layout_centerHorizontal="true"
+        />
 
 </RelativeLayout>
