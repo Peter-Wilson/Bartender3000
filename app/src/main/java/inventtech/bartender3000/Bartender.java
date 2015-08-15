@@ -42,19 +42,6 @@ import java.util.UUID;
 public class Bartender extends Activity {
 
     private boolean cupScanned;
-    static final String cup = "CUP_THERE";
-    private BluetoothAdapter bluetoothAdapter;
-    private BluetoothDevice arduino;
-    private BluetoothSocket arduinoSocket;
-    private Thread input;
-    private boolean stopWorker;
-    private InputStream in;
-    private OutputStream out;
-    byte[] readBuffer;
-    int readBufferPosition;
-    private static final int  REQUEST_ENABLE = 0x1;
-    private static final int DISCOVER_DURATION = 300;
-    private static final int REQUEST_BLU = 2;
     private ImageButton drink1, drink2, drink3, drink4;
 
     @Override
@@ -65,6 +52,23 @@ public class Bartender extends Activity {
         cupScanned = false;
         initializeBluetooth();
     }
+
+
+    //---------------------------- BLUETOOTH INTEGRATION CODE --------------------------------------
+    // Everything in here is what you will need to use to connect and set up input/output streams
+    //         to a Bluetooth device. Please credit Peter Wilson if you use this code
+    //---------------------------------------------------------------------------------------------
+    private BluetoothAdapter bluetoothAdapter;
+    private BluetoothDevice arduino;
+    private BluetoothSocket arduinoSocket;
+    private Thread input;
+    private boolean stopWorker;
+    private InputStream in;
+    private OutputStream out;
+    byte[] readBuffer;
+    int readBufferPosition;
+    private static final int  REQUEST_ENABLE = 0x1;
+    private static final int REQUEST_BLU = 2;
 
     private void initializeBluetooth() {
         //Get the bluetooth adapter
@@ -101,7 +105,8 @@ public class Bartender extends Activity {
         catch(Exception e)
         {
             //cannot connect to the arduino
-            showAppCloseAlert("Cannot Connect","Unable to connect to Arduino. Application closing, try Unpairing with the device.");
+            showAppCloseAlert("Cannot Connect","Unable to connect to Arduino. Application closing, try RePairing with the device.");
+            unpairDevice(arduino);
             System.out.println("Connection was unsuccessful");
             return;
         }
@@ -120,6 +125,18 @@ public class Bartender extends Activity {
         }
 
 
+    }
+
+    //For UnPairing
+    private void unpairDevice(BluetoothDevice device) {
+        try {
+            Log.d("unpairDevice()", "Start Un-Pairing...");
+            Method m = device.getClass().getMethod("removeBond", (Class[]) null);
+            m.invoke(device, (Object[]) null);
+            Log.d("unpairDevice()", "Un-Pairing finished.");
+        } catch (Exception e) {
+            System.out.println("Cannot unpair");
+        }
     }
 
     @Override
@@ -198,107 +215,66 @@ public class Bartender extends Activity {
                 .show();
     }
 
-    //set up the clickListeners for the drink buttons
-    private void SetOnClickListeners() {
-
-        drink1 = (ImageButton) findViewById(R.id.drink1);
-        drink2 = (ImageButton) findViewById(R.id.drink2);
-        drink3 = (ImageButton) findViewById(R.id.drink3);
-        drink4 = (ImageButton) findViewById(R.id.drink4);
-
-        drink1.setOnClickListener(new View.OnClickListener()
-        { @Override public void onClick(View v) {ButtonSelected(drink1,'a');}});
-
-        drink2.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {ButtonSelected(drink2,'b');}});
-
-        drink3.setOnClickListener(new View.OnClickListener()
-        {@Override public void onClick(View v) {ButtonSelected(drink3,'c');}});
-
-        drink4.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {ButtonSelected(drink4,'d');}});
-    }
-
-    protected void ButtonSelected(ImageButton button,char choice)
-    {
-        try {
-            //darken all the buttons other than the one selected
-            ((ImageView) findViewById(R.id.drink1)).setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
-            ((ImageView) findViewById(R.id.drink2)).setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
-            ((ImageView) findViewById(R.id.drink3)).setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
-            ((ImageView) findViewById(R.id.drink4)).setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
-            button.clearColorFilter();
-
-            //send the selection to the arduino
-            out.write(choice);
-            out.flush();
-        } catch (Exception e) {
-            Toast.makeText(this,"Selection cannot be sent to the Bartender.", Toast.LENGTH_LONG);
-        }
-    }
-
     //create the thread to read from the arduino
     private void SetUpInputThread() {
-            final byte delimiter = 10; //This is the ASCII code for a newline character
-            stopWorker = false;
-            readBufferPosition = 0;
-            readBuffer = new byte[1024];
+        final byte delimiter = 10; //This is the ASCII code for a newline character
+        stopWorker = false;
+        readBufferPosition = 0;
+        readBuffer = new byte[1024];
 
-            input = new Thread(new Runnable() {
-                public void run() {
-                    Log.d("CREATION","creating thread");
-                    try {
-                        Log.d("TRY", "in try");
+        input = new Thread(new Runnable() {
+            public void run() {
+                Log.d("CREATION","creating thread");
+                try {
+                    Log.d("TRY", "in try");
 
-                        while (!Thread.currentThread().isInterrupted() && !stopWorker) {
-                            int bytesAvailable = in.available();
+                    while (!Thread.currentThread().isInterrupted() && !stopWorker) {
+                        int bytesAvailable = in.available();
 
-                            Log.d("AVAILABLE", "" + bytesAvailable);
-                            if (bytesAvailable > 0) {
-                                byte[] packetBytes = new byte[bytesAvailable];
-                                in.read(packetBytes);
+                        Log.d("AVAILABLE", "" + bytesAvailable);
+                        if (bytesAvailable > 0) {
+                            byte[] packetBytes = new byte[bytesAvailable];
+                            in.read(packetBytes);
 
-                                for (int i = 0; i < bytesAvailable; i++) {
-                                    byte b = packetBytes[i];
-                                    if (b == delimiter) {
-                                        byte[] encodedBytes = new byte[readBufferPosition];
-                                        System.arraycopy(readBuffer, 0, encodedBytes, 0, encodedBytes.length);
-                                        final String data = new String(encodedBytes, "US-ASCII");
-                                        Log.d("INPUT", data);
-                                        readBufferPosition = 0;
+                            for (int i = 0; i < bytesAvailable; i++) {
+                                byte b = packetBytes[i];
+                                if (b == delimiter) {
+                                    byte[] encodedBytes = new byte[readBufferPosition];
+                                    System.arraycopy(readBuffer, 0, encodedBytes, 0, encodedBytes.length);
+                                    final String data = new String(encodedBytes, "US-ASCII");
+                                    Log.d("INPUT", data);
+                                    readBufferPosition = 0;
 
-                                        runOnUiThread(new Runnable() {
-                                            public void run() {
-                                                //the cup is ready to be filled
-                                                if (data.equals("y\r")) {
-                                                    newCup();
+                                    runOnUiThread(new Runnable() {
+                                        public void run() {
+                                            //the cup is ready to be filled
+                                            if (data.equals("y\r")) {
+                                                newCup();
                                                 //the cup is not ready to be filled
-                                                } else if (data.equals("n\r")) {
-                                                    cupGone();
+                                            } else if (data.equals("n\r")) {
+                                                cupGone();
                                                 //the drink has been finished
-                                                } else if (data.equals("d\r")) {
-                                                    drinkFull();
-                                                }
+                                            } else if (data.equals("d\r")) {
+                                                drinkFull();
                                             }
-                                        });
-
-                                        //The variable data now contains our full command
-                                    } else {
-                                        readBuffer[readBufferPosition++] = b;
-                                    }
+                                        }
+                                    });
+                                } else {
+                                    readBuffer[readBufferPosition++] = b;
                                 }
                             }
                         }
-                        arduinoSocket.close();
                     }
-                    catch(Exception e) {
-                        Log.d("CAUGHT",e.getMessage());
-                        stopWorker = true;
-                        System.out.println("Error occurred while recieving input");
-                    }
+                    arduinoSocket.close();
                 }
-            });
-            input.start();
+                catch(Exception e) {
+                    Log.d("CAUGHT",e.getMessage());
+                    stopWorker = true;
+                    System.out.println("Error occurred while recieving input");
+                }
+            }
+        });
+        input.start();
     }
 
     //Find the paired arduino
@@ -316,7 +292,7 @@ public class Bartender extends Activity {
 
                 }
                 else
-                   i++;
+                    i++;
             }
         }
         return null;
@@ -338,16 +314,102 @@ public class Bartender extends Activity {
 
     }
 
+    //------------------------ END OF BLUETOOTH CODE ----------------------------
 
+
+
+    //set up the clickListeners for the drink buttons
+    private void SetOnClickListeners() {
+
+        drink1 = (ImageButton) findViewById(R.id.drink1);
+        drink2 = (ImageButton) findViewById(R.id.drink2);
+        drink3 = (ImageButton) findViewById(R.id.drink3);
+        drink4 = (ImageButton) findViewById(R.id.drink4);
+
+        drink1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ButtonSelected(drink1, 'a');
+            }
+        });
+
+        drink2.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ButtonSelected(drink2, 'b');
+            }
+        });
+
+        drink3.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ButtonSelected(drink3, 'c');
+            }
+        });
+
+        drink4.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ButtonSelected(drink4, 'd');
+            }
+        });
+    }
+
+    //remove click listeners and darken the buttons
+    private void DisableButtons()
+    {
+        drink1 = (ImageButton) findViewById(R.id.drink1);
+        drink2 = (ImageButton) findViewById(R.id.drink2);
+        drink3 = (ImageButton) findViewById(R.id.drink3);
+        drink4 = (ImageButton) findViewById(R.id.drink4);
+
+        drink1.setOnClickListener(null);
+        drink2.setOnClickListener(null);
+        drink3.setOnClickListener(null);
+        drink4.setOnClickListener(null);
+
+
+        drink1.setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
+        drink2.setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
+        drink3.setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
+        drink4.setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
+    }
+
+    //highlight the selected choice and send that choice to the arduino
+    protected void ButtonSelected(ImageButton button,char choice)
+    {
+        try {
+            //darken all the buttons other than the one selected
+            ((ImageView) findViewById(R.id.drink1)).setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
+            ((ImageView) findViewById(R.id.drink2)).setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
+            ((ImageView) findViewById(R.id.drink3)).setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
+            ((ImageView) findViewById(R.id.drink4)).setColorFilter(0x80808000, PorterDuff.Mode.MULTIPLY);
+            button.clearColorFilter();
+
+            //send the selection to the arduino
+            out.write(choice);
+            out.flush();
+        } catch (Exception e) {
+            Toast.makeText(this,"Selection cannot be sent to the Bartender.", Toast.LENGTH_LONG);
+        }
+    }
+
+    //undo any styling to the buttons and setup onclick listeners
+    protected void DefaultButtons()
+    {
+        ((ImageView) findViewById(R.id.drink1)).clearColorFilter();
+        ((ImageView) findViewById(R.id.drink2)).clearColorFilter();
+        ((ImageView) findViewById(R.id.drink3)).clearColorFilter();
+        ((ImageView) findViewById(R.id.drink4)).clearColorFilter();
+        SetOnClickListeners();
+    }
+
+    //Save the instance on close
     @Override
     protected void onSaveInstanceState (Bundle outState) {
-        try {
-            arduinoSocket.close();
-        }
-        catch(Exception e){     }
+        try { arduinoSocket.close();  }
+        catch(Exception e){  Toast.makeText(this, "Warning: could not close socket", Toast.LENGTH_LONG);}
 
-        //save the cup state
-        outState.putBoolean("CupThere", cupScanned);
         super.onSaveInstanceState(outState);
     }
 
@@ -377,9 +439,9 @@ public class Bartender extends Activity {
     {
         if(!cupScanned) {
             cupScanned = true;
+            DefaultButtons();
             Toast.makeText(this,"A Cup has been detected, select your drink", Toast.LENGTH_LONG);
             setContentView(R.layout.activity_drink_selector);
-            SetOnClickListeners();
         }
 
     }
@@ -396,6 +458,7 @@ public class Bartender extends Activity {
 
     //the drink is filled
     public void drinkFull() {
+        DisableButtons();
         Toast.makeText(this, "The drink has been filled, you may remove the cup", Toast.LENGTH_LONG);
     }
 }
