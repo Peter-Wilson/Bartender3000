@@ -228,7 +228,11 @@ public class Bartender extends Activity {
         {@Override public void onClick(View v) {ButtonSelected(drink3,'c');}});
 
         drink4.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {ButtonSelected(drink4,'d');}});
+            @Override
+            public void onClick(View v) {
+                ButtonSelected(drink4, 'd');
+            }
+        });
     }
 
     protected void ButtonSelected(ImageButton button,char choice)
@@ -247,6 +251,14 @@ public class Bartender extends Activity {
         } catch (Exception e) {
             Toast.makeText(this,"Selection cannot be sent to the Bartender.", Toast.LENGTH_LONG);
         }
+    }
+
+    protected void DefaultButtons()
+    {
+        ((ImageView) findViewById(R.id.drink1)).clearColorFilter();
+        ((ImageView) findViewById(R.id.drink2)).clearColorFilter();
+        ((ImageView) findViewById(R.id.drink3)).clearColorFilter();
+        ((ImageView) findViewById(R.id.drink4)).clearColorFilter();
     }
 
     //create the thread to read from the arduino
@@ -389,6 +401,7 @@ public class Bartender extends Activity {
     {
         if(!cupScanned) {
             cupScanned = true;
+            DefaultButtons();
             Toast.makeText(this,"A Cup has been detected, select your drink", Toast.LENGTH_LONG);
             setContentView(R.layout.activity_drink_selector);
             SetOnClickListeners();
@@ -408,6 +421,7 @@ public class Bartender extends Activity {
 
     //the drink is filled
     public void drinkFull() {
+        DefaultButtons();
         Toast.makeText(this, "The drink has been filled, you may remove the cup", Toast.LENGTH_LONG);
     }
 }

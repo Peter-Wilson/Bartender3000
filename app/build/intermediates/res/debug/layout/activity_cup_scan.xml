@@ -30,14 +30,6 @@
         android:layout_below="@id/text"
         android:layout_centerHorizontal="true"
         />
-<!--
-    <ImageView
-        android:id="@+id/loader2"
-        android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:src="@drawable/download"
-        android:layout_below="@id/text"
-        android:gravity="center"/>-->
 
 </RelativeLayout>
 <!-- From: file:/C:/Users/Peter/Desktop/SideProjects/Bartender3000/app/src/main/res/layout/activity_cup_scan.xml -->
