@@ -439,9 +439,11 @@ public class Bartender extends Activity {
     {
         if(!cupScanned) {
             cupScanned = true;
-            DefaultButtons();
             Toast.makeText(this,"A Cup has been detected, select your drink", Toast.LENGTH_LONG);
             setContentView(R.layout.activity_drink_selector);
+
+            DefaultButtons();
+            //SetOnClickListeners();
         }
 
     }
